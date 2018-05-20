@@ -1245,7 +1245,7 @@ bool FFmpeg_Glue::NextFrame()
         return false;
 
     // Next frame
-    while (Packet->size || av_read_frame(FormatContext, Packet) >= 0)
+    while (!av_read_frame(FormatContext, Packet))
     {
         AVPacket TempPacket=*Packet;
         if (Packet->stream_index<InputDatas.size() && InputDatas[Packet->stream_index] && InputDatas[Packet->stream_index]->Enabled)
@@ -1301,28 +1301,62 @@ bool FFmpeg_Glue::OutputFrame(AVPacket* TempPacket, bool Decode)
         if (Encode_FormatContext)
             InputData->Encode(TempPacket);
     }
-    
+
     // Decoding
-    int got_frame;
+    int got_frame = 0;
+
     if (Decode)
     {
-        got_frame=0;
-        int Bytes;
-        switch(InputData->Type)
+        struct Local {
+            static bool process_frame(int type, AVCodecContext* dec_ctx, AVFrame* frame, AVPacket* pkt, int* packet_new) {
+                int ret = 0, got_frame = 0;
+                switch(type)
+                {
+                    case AVMEDIA_TYPE_VIDEO :
+                    case AVMEDIA_TYPE_AUDIO :
+                        if (*packet_new) {
+                            ret = avcodec_send_packet(dec_ctx, pkt);
+                            if (ret == AVERROR(EAGAIN)) {
+                                ret = 0;
+                            } else if (ret >= 0 || ret == AVERROR_EOF) {
+                                ret = 0;
+                                *packet_new = 0;
+                            }
+                        }
+                        if (ret >= 0) {
+                            ret = avcodec_receive_frame(dec_ctx, frame);
+                            if (ret >= 0) {
+                                got_frame = 1;
+                            } else if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+                                ret = 0;
+
+                                pkt->size = 0;
+                            }
+                        }
+                        break;
+
+                    case AVMEDIA_TYPE_SUBTITLE:
+                        // ret = avcodec_decode_subtitle2(dec_ctx, &sub, &got_frame, pkt);
+                        *packet_new = 0;
+                        break;
+
+                    default:
+                        *packet_new = 0;
+                }
+
+                if (ret < 0)
+                    return ret;
+
+                return got_frame || *packet_new;
+            }
+        };
+
+        int packet_new = 1;
+        while(Local::process_frame(InputData->Type, InputData->Stream->codec, Frame, TempPacket, &packet_new) > 0)
         {
-            case AVMEDIA_TYPE_VIDEO : Bytes=DecodeVideo(InputData, Frame, got_frame, TempPacket); break;
-            case AVMEDIA_TYPE_AUDIO : Bytes=avcodec_decode_audio4(InputData->Stream->codec, Frame, &got_frame, TempPacket); break;
-            default                 : Bytes=0;
+            got_frame = 1;
+            std::cout << "Frame metadata: " << Frame->metadata;
         }
-        
-        if (Bytes<=0 && !got_frame)
-        {
-            TempPacket->data+=TempPacket->size;
-            TempPacket->size=0;
-            return false;
-        }
-        TempPacket->data+=Bytes;
-        TempPacket->size-=Bytes;
     }
     else if (Frame && Frame->format!=-1)
         got_frame=1;
