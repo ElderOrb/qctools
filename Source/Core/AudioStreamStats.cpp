@@ -63,7 +63,7 @@ AudioStreamStats::AudioStreamStats(XMLElement *streamElement) : CommonStreamStat
         bits_per_sample = std::stoi(bits_per_sample_value);
 }
 
-AudioStreamStats::AudioStreamStats(AVStream* stream, AVFormatContext *context) : CommonStreamStats(stream),
+AudioStreamStats::AudioStreamStats(AVStream* stream, AVFormatContext *context) : CommonStreamStats(stream, avcodec_find_decoder(stream->codecpar->codec_id)),
     sample_fmt_string(""),
     sample_rate(stream != NULL ? stream->codecpar->sample_rate : 0),
     channels(stream != NULL ? stream->codecpar->channels : 0),

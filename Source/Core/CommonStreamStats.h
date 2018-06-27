@@ -19,12 +19,13 @@ namespace tinyxml2 {
 
 struct AVFormatContext;
 struct AVStream;
+struct AVCodec;
 
 class CommonStreamStats
 {
 public:
     CommonStreamStats(tinyxml2::XMLElement* streamElement);
-    CommonStreamStats(AVStream* stream);
+    CommonStreamStats(AVStream* stream, AVCodec* codec);
     virtual ~CommonStreamStats();
 
     // stream info

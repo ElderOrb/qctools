@@ -124,6 +124,8 @@ FFmpeg_Glue::inputdata::inputdata()
     FirstTimeStamp(DBL_MAX),
     Duration(0),
 
+    pCodecContext(NULL),
+
     // Cache
     FramesCache(NULL),
     FramesCache_Default(NULL)
@@ -133,8 +135,8 @@ FFmpeg_Glue::inputdata::inputdata()
 FFmpeg_Glue::inputdata::~inputdata()
 {
     // FFmpeg pointers - Input
-    if (Stream)
-        avcodec_close(Stream->codec);
+    if (pCodecContext)
+        avcodec_close(pCodecContext);
 
     // FramesCache
     if (FramesCache)
@@ -144,6 +146,16 @@ FFmpeg_Glue::inputdata::~inputdata()
             av_frame_free(&((*FramesCache)[Pos]));
         }
         delete FramesCache;
+    }
+}
+
+void FFmpeg_Glue::inputdata::open()
+{
+    pDecoder = avcodec_find_decoder(Stream->codecpar->codec_id);
+    if (pDecoder) {
+        pCodecContext = avcodec_alloc_context3(pDecoder);
+        avcodec_parameters_to_context(pCodecContext, Stream->codecpar);
+        avcodec_open2(pCodecContext, pDecoder, NULL);
     }
 }
 
@@ -624,9 +636,7 @@ FFmpeg_Glue::FFmpeg_Glue (const string &FileName_, activealltracks ActiveAllTrac
                                                         inputdata* InputData=new inputdata;
                                                         InputData->Type=FormatContext->streams[Pos]->codecpar->codec_type;
                                                         InputData->Stream=FormatContext->streams[Pos];
-                                                        AVCodec* Codec=avcodec_find_decoder(InputData->Stream->codecpar->codec_id);
-                                                        if (Codec)
-                                                            avcodec_open2(InputData->Stream->codec, Codec, NULL);
+                                                        InputData->open();
 
                                                         InputData->FrameCount=InputData->Stream->nb_frames;
                                                         if (InputData->Stream->duration!=AV_NOPTS_VALUE)
@@ -867,7 +877,7 @@ void FFmpeg_Glue::Seek(size_t FramePos)
             }
 
             // Flushing
-            avcodec_flush_buffers(InputData->Stream->codec);
+            avcodec_flush_buffers(InputData->pCodecContext);
 
             break;
         }
@@ -1000,7 +1010,7 @@ bool FFmpeg_Glue::NextFrame()
 
 int DecodeVideo(FFmpeg_Glue::inputdata* InputData, AVFrame* Frame, int & got_frame, AVPacket* TempPacket)
 {
-	return avcodec_decode_video2(InputData->Stream->codec, Frame, &got_frame, TempPacket);
+    return avcodec_decode_video2(InputData->pCodecContext, Frame, &got_frame, TempPacket);
 }
 //---------------------------------------------------------------------------
 bool FFmpeg_Glue::OutputFrame(AVPacket* TempPacket, bool Decode)
@@ -1020,7 +1030,7 @@ bool FFmpeg_Glue::OutputFrame(AVPacket* TempPacket, bool Decode)
         switch(InputData->Type)
         {
             case AVMEDIA_TYPE_VIDEO : Bytes=DecodeVideo(InputData, Frame, got_frame, TempPacket); break;
-            case AVMEDIA_TYPE_AUDIO : Bytes=avcodec_decode_audio4(InputData->Stream->codec, Frame, &got_frame, TempPacket); break;
+            case AVMEDIA_TYPE_AUDIO : Bytes=avcodec_decode_audio4(InputData->pCodecContext, Frame, &got_frame, TempPacket); break;
             default                 : Bytes=0;
         }
         
@@ -1370,10 +1380,10 @@ string FFmpeg_Glue::VideoFormat_Get()
             break;
         }
 
-    if (InputData==NULL || InputData->Stream==NULL || InputData->Stream->codec==NULL || InputData->Stream->codec->codec==NULL || InputData->Stream->codec->codec->long_name==NULL)
+    if (InputData==NULL || InputData->Stream==NULL || !InputData->pDecoder)
         return "";
 
-    return InputData->Stream->codec->codec->long_name;
+    return InputData->pDecoder->long_name;
 }
 
 //---------------------------------------------------------------------------
@@ -1404,7 +1414,7 @@ double FFmpeg_Glue::FramesDivDuration_Get()
             break;
         }
 
-    if (InputData==NULL || InputData->Stream==NULL || InputData->Stream->codec==NULL || InputData->Stream->codec->codec==NULL || InputData->Stream->codec->codec->long_name==NULL)
+    if (InputData==NULL || InputData->Stream==NULL || !InputData->pDecoder)
         return 0;
 
     if (InputData->FrameCount && InputData->Duration)
@@ -1424,7 +1434,7 @@ string FFmpeg_Glue::RVideoFrameRate_Get()
             break;
         }
 
-    if (InputData==NULL || InputData->Stream==NULL || InputData->Stream->codec==NULL || InputData->Stream->codec->codec==NULL || InputData->Stream->codec->codec->long_name==NULL)
+    if (InputData==NULL || InputData->Stream==NULL || !InputData->pDecoder)
         return string();
     
     if (InputData->Stream->r_frame_rate.num==0)
@@ -1447,7 +1457,7 @@ string FFmpeg_Glue::AvgVideoFrameRate_Get()
             break;
         }
 
-    if (InputData==NULL || InputData->Stream==NULL || InputData->Stream->codec==NULL || InputData->Stream->codec->codec==NULL || InputData->Stream->codec->codec->long_name==NULL)
+    if (InputData==NULL || InputData->Stream==NULL || !InputData->pDecoder)
         return string();
     
     ostringstream convert;
@@ -1510,10 +1520,10 @@ int FFmpeg_Glue::Width_Get()
             break;
         }
 
-    if (InputData==NULL || InputData->Stream==NULL || InputData->Stream->codec==NULL)
+    if (InputData==NULL || InputData->Stream==NULL || !InputData->pDecoder)
         return 0;
 
-    return InputData->Stream->codec->width;
+    return InputData->Stream->codecpar->width;
 }
 
 //---------------------------------------------------------------------------
@@ -1527,10 +1537,10 @@ int FFmpeg_Glue::Height_Get()
             break;
         }
 
-    if (InputData==NULL || InputData->Stream==NULL || InputData->Stream->codec==NULL)
+    if (InputData==NULL || InputData->Stream==NULL || !InputData->pDecoder)
         return 0;
 
-    return InputData->Stream->codec->height;
+    return InputData->Stream->codecpar->height;
 }
 
 //---------------------------------------------------------------------------
@@ -1544,10 +1554,10 @@ string FFmpeg_Glue::FieldOrder_Get()
             break;
         }
 
-    if (InputData==NULL || InputData->Stream==NULL || InputData->Stream->codec==NULL)
+    if (InputData==NULL || InputData->Stream==NULL || !InputData->pDecoder)
         return string();
 
-    switch (InputData->Stream->codec->field_order)
+    switch (InputData->Stream->codecpar->field_order)
     {
         case AV_FIELD_UNKNOWN: return "unknown";
         case AV_FIELD_PROGRESSIVE: return "progressive";
@@ -1570,14 +1580,14 @@ double FFmpeg_Glue::DAR_Get()
             break;
         }
 
-    if (InputData==NULL || InputData->Stream==NULL || InputData->Stream->codec==NULL || InputData->Stream->codec->codec==NULL || InputData->Stream->codec->codec->long_name==NULL)
+    if (InputData==NULL || InputData->Stream==NULL || !InputData->pDecoder)
         return 0;
 
     double DAR;
-    if (InputData->Stream->codec->sample_aspect_ratio.num && InputData->Stream->codec->sample_aspect_ratio.den)
-        DAR=((double)InputData->Stream->codec->width)/InputData->Stream->codec->height*InputData->Stream->codec->sample_aspect_ratio.num/InputData->Stream->codec->sample_aspect_ratio.den;
+    if (InputData->Stream->codecpar->sample_aspect_ratio.num && InputData->Stream->codecpar->sample_aspect_ratio.den)
+        DAR=((double)InputData->Stream->codecpar->width)/InputData->Stream->codecpar->height*InputData->Stream->codecpar->sample_aspect_ratio.num/InputData->Stream->codecpar->sample_aspect_ratio.den;
     else
-        DAR=((double)InputData->Stream->codec->width)/InputData->Stream->codec->height;
+        DAR=((double)InputData->Stream->codecpar->width)/InputData->Stream->codecpar->height;
     return DAR;
 }
 //---------------------------------------------------------------------------
@@ -1591,7 +1601,7 @@ string FFmpeg_Glue::SAR_Get()
             break;
         }
 
-    if (InputData==NULL || InputData->Stream==NULL || InputData->Stream->codec==NULL)
+    if (InputData==NULL || InputData->Stream==NULL || !InputData->pCodecContext)
         return string();
 
     if (InputData->Stream->sample_aspect_ratio.num && InputData->Stream->sample_aspect_ratio.num==0)
@@ -1602,12 +1612,12 @@ string FFmpeg_Glue::SAR_Get()
         convert << InputData->Stream->sample_aspect_ratio.num << "/" << InputData->Stream->sample_aspect_ratio.den;
         return convert.str();
     }
-    else if (InputData->Stream->codec->sample_aspect_ratio.num && InputData->Stream->codec->sample_aspect_ratio.num==0)
+    else if (InputData->Stream->codecpar->sample_aspect_ratio.num && InputData->Stream->codecpar->sample_aspect_ratio.num==0)
       return "Und";
     else
     {
         ostringstream convert;
-        convert << InputData->Stream->codec->sample_aspect_ratio.num << "/" << InputData->Stream->codec->sample_aspect_ratio.den;
+        convert << InputData->Stream->codecpar->sample_aspect_ratio.num << "/" << InputData->Stream->codecpar->sample_aspect_ratio.den;
         return convert.str();
     }
 }
@@ -1734,10 +1744,10 @@ string FFmpeg_Glue::PixFormat_Get()
             break;
         }
 
-    if (InputData==NULL || InputData->Stream==NULL || InputData->Stream->codec==NULL)
+    if (InputData==NULL || InputData->Stream==NULL || !InputData->pCodecContext)
         return string();
 
-    switch (InputData->Stream->codec->pix_fmt)
+    switch (InputData->pCodecContext->pix_fmt)
     {
         case AV_PIX_FMT_YUV420P: return "planar YUV 4:2:0, 12bpp, (1 Cr & Cb sample per 2x2 Y samples)";
         case AV_PIX_FMT_YUYV422: return "packed YUV 4:2:2, 16bpp, Y0 Cb Y1 Cr";
@@ -2024,10 +2034,10 @@ string FFmpeg_Glue::ColorSpace_Get()
             break;
         }
 
-    if (InputData==NULL || InputData->Stream==NULL || InputData->Stream->codec==NULL)
+    if (InputData==NULL || InputData->Stream==NULL || !InputData->pCodecContext)
         return string();
 
-    switch (InputData->Stream->codec->colorspace)
+    switch (InputData->pCodecContext->colorspace)
     {
         case AVCOL_SPC_RGB: return "RGB: order of coefficients is actually GBR, also IEC 61966-2-1 (sRGB)";
         case AVCOL_SPC_BT709: return "BT.709"; // full: "BT.709 / ITU-R BT1361 / IEC 61966-2-4 xvYCC709 / SMPTE RP177 Annex B"
@@ -2056,10 +2066,10 @@ string FFmpeg_Glue::ColorRange_Get()
             break;
         }
 
-    if (InputData==NULL || InputData->Stream==NULL || InputData->Stream->codec==NULL)
+    if (InputData==NULL || InputData->Stream==NULL || InputData->Stream->codec)
         return string();
 
-    switch (InputData->Stream->codec->color_range)
+    switch (InputData->pCodecContext->color_range)
     {
         case AVCOL_RANGE_UNSPECIFIED: return "Unspecified";
         case AVCOL_RANGE_MPEG: return "Broadcast Range"; // full: "Broadcast Range (219*2^n-1)"
@@ -2079,10 +2089,10 @@ int FFmpeg_Glue::BitsPerRawSample_Get(int streamType)
             break;
         }
 
-    if (InputData==NULL || InputData->Stream==NULL || InputData->Stream->codec==NULL)
+    if (InputData==NULL || InputData->Stream==NULL || !InputData->pCodecContext)
         return 0;
 
-    return InputData->Stream->codec->bits_per_raw_sample;
+    return InputData->Stream->codecpar->bits_per_raw_sample;
 }
 
 //---------------------------------------------------------------------------
@@ -2096,10 +2106,10 @@ string FFmpeg_Glue::AudioFormat_Get()
             break;
         }
 
-    if (InputData==NULL || InputData->Stream==NULL || InputData->Stream->codec==NULL || InputData->Stream->codec->codec==NULL || InputData->Stream->codec->codec->long_name==NULL)
+    if (InputData==NULL || InputData->Stream==NULL || !InputData->pCodecContext)
         return string();
 
-    return InputData->Stream->codec->codec->long_name;
+    return InputData->pDecoder->long_name;
 }
 
 //---------------------------------------------------------------------------
@@ -2112,10 +2122,10 @@ string FFmpeg_Glue::SampleFormat_Get()
             InputData=InputDatas[Pos];
             break;
         }
-        if (InputData==NULL || InputData->Stream==NULL || InputData->Stream->codec==NULL)
+        if (InputData==NULL || InputData->Stream==NULL || !InputData->pCodecContext)
             return "";
 
-        switch (InputData->Stream->codec->sample_fmt)
+        switch (InputData->pCodecContext->sample_fmt)
         {
             case AV_SAMPLE_FMT_NONE: return "none";
             case AV_SAMPLE_FMT_U8: return "unsigned 8 bits";
@@ -2143,10 +2153,10 @@ int FFmpeg_Glue::sampleFormat()
             break;
         }
 
-    if (InputData==NULL || InputData->Stream==NULL || InputData->Stream->codec==NULL)
+    if (InputData==NULL || InputData->Stream==NULL || !InputData->pCodecContext)
         return AV_SAMPLE_FMT_NONE;
 
-    return InputData->Stream->codec->sample_fmt;
+    return InputData->pCodecContext->sample_fmt;
 }
 
 //---------------------------------------------------------------------------
@@ -2160,10 +2170,10 @@ int FFmpeg_Glue::SamplingRate_Get()
             break;
         }
 
-    if (InputData==NULL || InputData->Stream==NULL || InputData->Stream->codec->sample_rate==0)
+    if (InputData==NULL || InputData->Stream==NULL || InputData->Stream->codecpar->sample_rate==0)
         return 0;
 
-    return InputData->Stream->codec->sample_rate;
+    return InputData->Stream->codecpar->sample_rate;
 }
 
 //---------------------------------------------------------------------------
@@ -2177,10 +2187,10 @@ string FFmpeg_Glue::ChannelLayout_Get()
             break;
         }
 
-    if (InputData==NULL || InputData->Stream==NULL || InputData->Stream->codec==NULL || InputData->Stream->codec->codec==NULL)
+    if (InputData==NULL || InputData->Stream==NULL || !InputData->pCodecContext)
         return "";
 
-    switch (InputData->Stream->codec->channel_layout)
+    switch (InputData->Stream->codecpar->channel_layout)
     {
         case AV_CH_LAYOUT_MONO: return "mono";
         case AV_CH_LAYOUT_STEREO: return "stereo"; 

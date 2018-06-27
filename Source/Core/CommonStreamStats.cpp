@@ -163,11 +163,11 @@ CommonStreamStats::CommonStreamStats(XMLElement *streamElement) :
     }
 }
 
-CommonStreamStats::CommonStreamStats(AVStream* stream) :
+CommonStreamStats::CommonStreamStats(AVStream* stream, AVCodec* codec) :
     stream_index(stream->index),
-    codec_name(stream ? stream->codec->codec->name : ""),
-    codec_long_name(stream ? stream->codec->codec->long_name : ""),
-    codec_tag(stream ? stream->codec->codec_tag : 0),
+    codec_name(codec ? codec->name : ""),
+    codec_long_name(codec ? codec->long_name : ""),
+    codec_tag(stream ? stream->codecpar->codec_tag : 0),
     r_frame_rate(stream != NULL ? rational_to_string(stream->r_frame_rate, '/') : ""),
     avg_frame_rate(stream != NULL ? rational_to_string(stream->avg_frame_rate, '/') : ""),
     time_base(stream != NULL ? rational_to_string(stream->time_base, '/') : ""),

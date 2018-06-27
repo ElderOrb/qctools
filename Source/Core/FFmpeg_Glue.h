@@ -206,6 +206,8 @@ private:
         inputdata();
         ~inputdata();
         
+        void open();
+
         //Actions
 
         // In
@@ -224,6 +226,9 @@ private:
         double                  FirstTimeStamp;         // First PTS met in seconds
         double                  Duration;               // Duration in seconds
         int                     TimecodeBCD;            // Timecode in BCD format
+
+        AVCodecContext*         pCodecContext;
+        AVCodec*                pDecoder;
 
         // Cache
         std::vector<AVFrame*>*  FramesCache;

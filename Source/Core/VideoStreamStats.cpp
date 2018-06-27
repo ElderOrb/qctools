@@ -101,7 +101,7 @@ VideoStreamStats::VideoStreamStats(XMLElement *streamElement) : CommonStreamStat
         refs = refs_value;
 }
 
-VideoStreamStats::VideoStreamStats(AVStream* stream, AVFormatContext *context) : CommonStreamStats(stream),
+VideoStreamStats::VideoStreamStats(AVStream* stream, AVFormatContext *context) : CommonStreamStats(stream, avcodec_find_decoder(stream->codecpar->codec_id)),
     width(stream != NULL ? std::to_string(stream->codecpar->width) : ""),
     height(stream != NULL ? std::to_string(stream->codecpar->height) : ""),
     coded_width(stream != NULL ? std::to_string(stream->codec->coded_width) : ""),
