@@ -46,6 +46,7 @@ extern "C"
 #include <iomanip>
 #include <cstdlib>
 #include <cfloat>
+#include <mutex>
 //---------------------------------------------------------------------------
 
 void LibsVersion_Inject(stringstream &LibsVersion, const char* Name, int Value)
@@ -178,12 +179,12 @@ FFmpeg_Glue::outputdata::outputdata()
     Thumbnails_Modulo(1),
     Stats(NULL),
     
+    // Status
+    FramePos(0),
+
     // Helpers
     Width(0),
-    Height(0),
-
-    // Status
-    FramePos(0)
+    Height(0)
 {
 }
 
@@ -235,7 +236,7 @@ void FFmpeg_Glue::outputdata::Process(AVFrame* DecodedFrame_)
     if (Stats && FilteredFrame && !Filter.empty())
     {
         Stats->TimeStampFromFrame(FilteredFrame.get(), FramePos-1);
-        Stats->StatsFromFrame(FilteredFrame.get(), Stream->codec->width, Stream->codec->height);
+        Stats->StatsFromFrame(FilteredFrame.get(), Stream->codecpar->width, Stream->codecpar->height);
     }
 
     // Scale
@@ -410,8 +411,8 @@ bool FFmpeg_Glue::outputdata::InitThumnails()
     JpegOutput_CodecContext->width         = Width;
     JpegOutput_CodecContext->height        = Height;
     JpegOutput_CodecContext->pix_fmt       = AV_PIX_FMT_YUVJ420P;
-    JpegOutput_CodecContext->time_base.num = Stream->codec->time_base.num;
-    JpegOutput_CodecContext->time_base.den = Stream->codec->time_base.den;
+    JpegOutput_CodecContext->time_base.num = Stream->time_base.num;
+    JpegOutput_CodecContext->time_base.den = Stream->time_base.den;
     if (avcodec_open2(JpegOutput_CodecContext, JpegOutput_Codec, NULL) < 0)
         return false;
 
@@ -435,23 +436,23 @@ bool FFmpeg_Glue::outputdata::FilterGraph_Init()
     {
         Source                                  = avfilter_get_by_name("buffer");
         Sink                                    = avfilter_get_by_name("buffersink");
-        Args    << "video_size="                << Stream->codec->width
-                << "x"                          << Stream->codec->height
-                <<":pix_fmt="                   << (int)Stream->codec->pix_fmt
-                <<":time_base="                 << Stream->codec->time_base.num
-                << "/"                          << Stream->codec->time_base.den
-                <<":pixel_aspect="              << Stream->codec->sample_aspect_ratio.num
-                << "/"                          << Stream->codec->sample_aspect_ratio.den;
+        Args    << "video_size="                << Stream->codecpar->width
+                << "x"                          << Stream->codecpar->height
+                <<":pix_fmt="                   << Stream->codecpar->format
+                <<":time_base="                 << Stream->time_base.num
+                << "/"                          << Stream->time_base.den
+                <<":pixel_aspect="              << Stream->codecpar->sample_aspect_ratio.num
+                << "/"                          << Stream->codecpar->sample_aspect_ratio.den;
     }
     if (Type==AVMEDIA_TYPE_AUDIO)
     {
         Source                                  = avfilter_get_by_name("abuffer");
         Sink                                    = avfilter_get_by_name(OutputMethod==Output_Stats?"abuffersink":"buffersink");
-        Args    << "time_base="                 << Stream->codec->time_base.num
-                << "/"                          << Stream->codec->time_base.den
-                <<":sample_rate="               << Stream->codec->sample_rate
-                <<":sample_fmt="                << av_get_sample_fmt_name(Stream->codec->sample_fmt)
-                <<":channel_layout=0x"          << std::hex << (Stream->codec->channel_layout ? Stream->codec->channel_layout : av_get_default_channel_layout(Stream->codec->channels));
+        Args    << "time_base="                 << Stream->time_base.num
+                << "/"                          << Stream->time_base.den
+                <<":sample_rate="               << Stream->codecpar->sample_rate
+                <<":sample_fmt="                << av_get_sample_fmt_name((AVSampleFormat) Stream->codecpar->format)
+                <<":channel_layout=0x"          << std::hex << (Stream->codecpar->channel_layout ? Stream->codecpar->channel_layout : av_get_default_channel_layout(Stream->codecpar->channels));
             ;
     }
     if (avfilter_graph_create_filter(&FilterGraph_Source_Context, Source, "in", Args.str().c_str(), NULL, FilterGraph)<0)
@@ -573,9 +574,16 @@ void ensureFFMpegInitialized() {
     if(!initialized)  {
         qDebug() << "initializing ffmpeg.. .";
 
-        // FFmpeg init
-        av_register_all();
-        avfilter_register_all();
+        static std::once_flag once;
+        std::call_once(once, []() {
+            AVFilter *prev = NULL, *p;
+            void *i = 0;
+            while((p = (AVFilter*)av_filter_iterate(&i))) {
+                if(prev)
+                    prev->next = p;
+                prev = p;
+            }
+        });
 
         initialized = true;
     }
@@ -588,10 +596,10 @@ void ensureFFMpegInitialized() {
 //---------------------------------------------------------------------------
 FFmpeg_Glue::FFmpeg_Glue (const string &FileName_, activealltracks ActiveAllTracks, std::vector<CommonStats*>* Stats_, StreamsStats** streamsStats, FormatStats** formatStats, bool WithStats_) :
     Stats(Stats_),
-    WithStats(WithStats_),
-    FileName(FileName_),
+    mutex(nullptr),
     InputDatas_Copy(false),
-    mutex(nullptr)
+    FileName(FileName_),
+    WithStats(WithStats_)
 {
     ensureFFMpegInitialized();
 
@@ -606,17 +614,17 @@ FFmpeg_Glue::FFmpeg_Glue (const string &FileName_, activealltracks ActiveAllTrac
         {
             if (avformat_find_stream_info(FormatContext, NULL)>=0)
             {
-                for (int Pos=0; Pos<FormatContext->nb_streams; Pos++)
+                for (unsigned int Pos=0; Pos<FormatContext->nb_streams; Pos++)
                 {
-                    switch (FormatContext->streams[Pos]->codec->codec_type)
+                    switch (FormatContext->streams[Pos]->codecpar->codec_type)
                     {
                         case AVMEDIA_TYPE_VIDEO:
                         case AVMEDIA_TYPE_AUDIO:
                                                     {
                                                         inputdata* InputData=new inputdata;
-                                                        InputData->Type=FormatContext->streams[Pos]->codec->codec_type;
+                                                        InputData->Type=FormatContext->streams[Pos]->codecpar->codec_type;
                                                         InputData->Stream=FormatContext->streams[Pos];
-                                                        AVCodec* Codec=avcodec_find_decoder(InputData->Stream->codec->codec_id);
+                                                        AVCodec* Codec=avcodec_find_decoder(InputData->Stream->codecpar->codec_id);
                                                         if (Codec)
                                                             avcodec_open2(InputData->Stream->codec, Codec, NULL);
 
@@ -933,7 +941,7 @@ bool FFmpeg_Glue::NextFrame()
                     InputDatas[0]->FramesCache_Default->width = (*InputDatas[0]->FramesCache)[0]->width;
                     InputDatas[0]->FramesCache_Default->height = (*InputDatas[0]->FramesCache)[0]->height;
                     InputDatas[0]->FramesCache_Default->format = (*InputDatas[0]->FramesCache)[0]->format;
-                    InputDatas[0]->FramesCache_Default->pkt_pts = (*InputDatas[0]->FramesCache)[0]->pkt_pts;
+                    InputDatas[0]->FramesCache_Default->pts = (*InputDatas[0]->FramesCache)[0]->pts;
                     int size = av_image_get_buffer_size((AVPixelFormat)InputDatas[0]->FramesCache_Default->format, InputDatas[0]->FramesCache_Default->width, InputDatas[0]->FramesCache_Default->height, 1);
                     uint8_t* buffer = (uint8_t*)av_malloc(size);
                     av_image_fill_arrays(InputDatas[0]->FramesCache_Default->data, InputDatas[0]->FramesCache_Default->linesize, buffer, (AVPixelFormat)InputDatas[0]->FramesCache_Default->format, InputDatas[0]->FramesCache_Default->width, InputDatas[0]->FramesCache_Default->height, 1);
@@ -2216,10 +2224,10 @@ int FFmpeg_Glue::ABitDepth_Get()
             break;
         }
 
-    if (InputData==NULL || InputData->Stream==NULL || InputData->Stream->codec==NULL || InputData->Stream->codec->codec==NULL || InputData->Stream->codec->codec->long_name==NULL)
+    if (InputData==NULL || InputData->Stream==NULL || InputData->Stream->codecpar==NULL || InputData->Stream->codecpar->codec_id == AV_CODEC_ID_NONE)
         return 0;
 
-    return InputData->Stream->codec->bits_per_coded_sample;
+    return InputData->Stream->codecpar->bits_per_coded_sample;
 }
 
 //---------------------------------------------------------------------------
