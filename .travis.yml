@@ -1,6 +1,6 @@
 
 sudo: required
-dist: trusty
+dist: xenial
 language: cpp
 
 notifications:
@@ -20,16 +20,16 @@ matrix:
     - os: osx
       
   include:
-    - os: linux
-      compiler: clang
-    - os: linux
-      compiler: gcc
-    - os: osx
-      compiler: clang
-      env: QCTOOLS_USE_BREW=true 
-    - os: osx
-      compiler: gcc
-      env: QCTOOLS_USE_BREW=true 
+#    - os: linux
+#      compiler: clang
+#    - os: linux
+#      compiler: gcc
+#    - os: osx
+#      compiler: clang
+#      env: QCTOOLS_USE_BREW=true 
+#    - os: osx
+#      compiler: gcc
+#      env: QCTOOLS_USE_BREW=true 
     - os: osx
       compiler: clang
       env: QCTOOLS_USE_BREW=false 
@@ -39,13 +39,17 @@ matrix:
 
 before_install:
   - echo QCTOOLS_USE_BREW = $QCTOOLS_USE_BREW
+#QT_CI_PACKAGES=qt.qt5.5124.clang_64 PATH=${TRAVIS_BUILD_DIR}/recipes:${TRAVIS_BUILD_DIR}/bin:${PATH} install-qt 5.12.4 && source qt-5.12.4.env && qmake -version
+
+#  - if [[ $TRAVIS_OS_NAME == osx ]]; then curl -O https://raw.githubusercontent.com/Homebrew/homebrew-core/006e2261834a7a3827bd4f2927a5a89802f77ffe/Formula/qt.rb && brew install ./qt.rb && export PATH=/usr/local/opt/qt5/bin:$PATH; fi
+#  - if [[ $TRAVIS_OS_NAME == osx ]]; then git clone https://github.com/benlau/qtci.git && source qtci/path.env && QT_CI_PACKAGES=qt.qt5.5124.gcc_64 && install-qt 5.12.4 && ls && source qt-5.12.4.env && qmake -version; fi
   - if [[ $TRAVIS_OS_NAME == osx ]]; then brew update && brew install qt5 && export PATH=/usr/local/opt/qt5/bin:$PATH; fi
-  
-  - if [[ $TRAVIS_OS_NAME == linux ]]; then sudo add-apt-repository --yes ppa:beineri/opt-qt551-trusty; fi
+   
+  - if [[ $TRAVIS_OS_NAME == linux ]]; then sudo add-apt-repository --yes ppa:beineri/opt-qt-5.12.3-xenial; fi
   - if [[ $TRAVIS_OS_NAME == linux ]]; then sudo apt-get update -qq; fi
-  - if [[ $TRAVIS_OS_NAME == linux ]]; then sudo apt-get install --force-yes -qq qt55base qt55declarative mesa-common-dev libglu1-mesa-dev; fi
+  - if [[ $TRAVIS_OS_NAME == linux ]]; then sudo apt-get install --force-yes -qq qt512base qt512declarative mesa-common-dev libglu1-mesa-dev; fi
   - if [[ $TRAVIS_OS_NAME == linux ]]; then sudo chmod 777 ./Project/BuildAllFromSource/*; fi
-  - if [[ $TRAVIS_OS_NAME == linux ]]; then source /opt/qt55/bin/qt55-env.sh; fi
+  - if [[ $TRAVIS_OS_NAME == linux ]]; then source /opt/qt512/bin/qt512-env.sh; fi
 
 install:
   - if [[ $TRAVIS_OS_NAME == linux ]]; then source ./Project/BuildAllFromSource/init.sh; fi
