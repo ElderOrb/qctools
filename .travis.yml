@@ -20,10 +20,10 @@ matrix:
     - os: osx
       
   include:
-#    - os: linux
-#      compiler: clang
-#    - os: linux
-#      compiler: gcc
+    - os: linux
+      compiler: clang
+    - os: linux
+      compiler: gcc
 #    - os: osx
 #      compiler: clang
 #      env: QCTOOLS_USE_BREW=true 
@@ -70,5 +70,5 @@ script:
   - if [[ $TRAVIS_OS_NAME == linux ]]; then cd ./qctools/Project/QtCreator && qmake && make; fi
   - if [[ $TRAVIS_OS_NAME == linux ]]; then ls && ls ./qctools-gui/QCTools; fi
   
-  - if [[ $TRAVIS_OS_NAME == osx ]]; then cd ./qctools/Project/QtCreator && qmake && make; fi
-  - if [[ $TRAVIS_OS_NAME == osx ]]; then ls && ls ./qctools-gui/QCTools.app; fi
+  - if [[ $TRAVIS_OS_NAME == osx ]]; then cd ./qctools/Project/QtCreator && mkdir build && cd build && qmake .. && make; fi
+  - if [[ $TRAVIS_OS_NAME == osx ]]; then ls && ls ./qctools-gui/QCTools.app && ls ./qctools-gui/QCTools.app/Contents; fi
