@@ -1,8 +1,5 @@
 QT       += core gui network
 
-QMAKEFEATURES = C:/Users/ai/Projects/qctools/qctools/Source/ThirdParty/QtAV/mkspecs/features
-message("!!! QMAKEFEATURES = " $$QMAKEFEATURES)
-
 #QT += avwidgets
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport qml
@@ -15,13 +12,15 @@ CONFIG += c++11 qt no_keywords
 include(../brew.pri)
 message("PWD = " $$PWD)
 
-# link against libqctools
-win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../qctools-lib/release/ -lqctools
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../qctools-lib/debug/ -lqctools
-else:unix: LIBS += -L$$OUT_PWD/../qctools-lib/ -lqctools
+include(../libqtmdk/libqtmdk.pri)
 
-INCLUDEPATH += $$PWD/../qctools-lib
-DEPENDPATH += $$PWD/../qctools-lib
+# link against libqctools
+win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../qctools-lib/release/ -lqctools -L$$OUT_PWD/../libqtmdk/release/ -lqtmdk
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../qctools-lib/debug/ -lqctools -L$$OUT_PWD/../libqtmdk/debug/ -lqtmdk
+else:unix: LIBS += -L$$OUT_PWD/../qctools-lib/ -lqctools -L$$OUT_PWD/../libqtmdk/ -lqtmdk
+
+INCLUDEPATH += $$PWD/../qctools-lib $$PWD/../libqtmdk
+DEPENDPATH += $$PWD/../qctools-lib $$PWD/../libqtmdk
 
 defineReplace(platformTargetSuffix) {
     ios:CONFIG(iphonesimulator, iphonesimulator|iphoneos): \
@@ -37,96 +36,6 @@ defineReplace(platformTargetSuffix) {
     }
     return($$suffix)
 }
-
-win32: {
-    QTAVLIBFOLDER=lib_win_x86_64
-}
-linux: {
-    QTAVLIBFOLDER=lib_linux_x86_64
-}
-mac: {
-    QTAVLIBFOLDER=lib_osx_x86_64_llvm
-}
-
-QTAV = $$QTAV
-isEmpty(QTAV) {
-    message('qctools-gui: using default location for QTAV: ' $$QTAV)
-    QTAV=$$absolute_path($$PWD/../qctools-qtav)
-}
-message('qctools-gui: QTAV: ' $$QTAV)
-
-message('QTAVLIBFOLDER: ' $$QTAVLIBFOLDER)
-INCLUDEPATH += $$absolute_path($$QTAV/src) $$absolute_path($$QTAV/src/QtAV)
-
-if(equals(MAKEFILE_GENERATOR, MSVC.NET)|equals(MAKEFILE_GENERATOR, MSBUILD)) {
-  TRY_COPY = $$QMAKE_COPY
-} else {
-  TRY_COPY = -$$QMAKE_COPY #makefile. or -\$\(COPY_FILE\)
-}
-
-message('TRY_COPY: ' $$TRY_COPY)
-
-mac: {
-    QTAVLIBS = -F$$absolute_path($$OUT_PWD/../qctools-qtav/$$QTAVLIBFOLDER) -framework QtAV$$platformTargetSuffix()
-
-    qtavlibs.pattern = $$absolute_path($$OUT_PWD/../qctools-qtav/$$QTAVLIBFOLDER/$${QTAVLIBNAME}*)
-    message('qtavlibs.pattern: ' $$qtavlibs.pattern)
-
-    qtavlibs.files = $$files($$qtavlibs.pattern)
-    message('qtavlibs.files: ' $$qtavlibs.files)
-
-    qtavlibs.path = $$absolute_path($$OUT_PWD$${BUILD_DIR}/$${TARGET}.app/Contents/Frameworks)
-    message('qtavlibs.path: ' $$qtavlibs.path)
-
-    qtavlibs.commands += $$escape_expand(\\n\\t)$$QMAKE_MKDIR_CMD $$shell_path($$qtavlibs.path)
-
-    for(f, qtavlibs.files) {
-      message('***: ' $$escape_expand(\\n\\t)$$QMAKE_COPY_DIR $$shell_path($$f) $$shell_path($$qtavlibs.path))
-      qtavlibs.commands += $$escape_expand(\\n\\t)$$QMAKE_COPY_DIR $$shell_path($$f) $$shell_path($$qtavlibs.path)
-    }
-
-    isEmpty(QMAKE_POST_LINK): QMAKE_POST_LINK = $$qtavlibs.commands
-    else: QMAKE_POST_LINK = $${QMAKE_POST_LINK}$$escape_expand(\\n\\t)$$qtavlibs.commands
-
-    message('QMAKE_POST_LINK: ' $${QMAKE_POST_LINK})
-
-} else {
-    win32: {
-        CONFIG(debug, debug|release) {
-            BUILD_SUFFIX=d
-            BUILD_DIR=/debug
-        } else:CONFIG(release, debug|release) {
-            BUILD_SUFFIX=
-            BUILD_DIR=/release
-        }
-        QTAVLIBNAME = QtAV$${BUILD_SUFFIX}1
-    } else {
-        QTAVLIBNAME = QtAV$${BUILD_SUFFIX}
-    }
-    message('QTAVLIBNAME: ' $${QTAVLIBNAME})
-
-    QTAVLIBS += -L$$absolute_path($$OUT_PWD/../qctools-qtav/$$QTAVLIBFOLDER) -l$${QTAVLIBNAME}
-    qtavlibs.pattern = $$absolute_path($$OUT_PWD/../qctools-qtav/$$QTAVLIBFOLDER/*.$$QMAKE_EXTENSION_SHLIB)
-    message('qtavlibs.pattern: ' $$qtavlibs.pattern)
-
-    qtavlibs.files = $$files($$qtavlibs.pattern)
-    message('qtavlibs.files: ' $$qtavlibs.files)
-
-    qtavlibs.path = $$absolute_path($$OUT_PWD$${BUILD_DIR})
-    for(f, qtavlibs.files) {
-      message('***: ' $$escape_expand(\\n\\t)$$TRY_COPY $$shell_path($$f) $$shell_path($$qtavlibs.path))
-      qtavlibs.commands += $$escape_expand(\\n\\t)$$TRY_COPY $$shell_path($$f) $$shell_path($$qtavlibs.path)
-    }
-
-    isEmpty(QMAKE_POST_LINK): QMAKE_POST_LINK = $$qtavlibs.commands
-    else: QMAKE_POST_LINK = $${QMAKE_POST_LINK}$$escape_expand(\\n\\t)$$qtavlibs.commands
-
-    message('QMAKE_POST_LINK: ' $${QMAKE_POST_LINK})
-}
-
-message('QTAVLIBS: ' $$QTAVLIBS)
-
-LIBS += $$QTAVLIBS
 
 win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../qctools-lib/release/libqctools.a
 else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../qctools-lib/debug/libqctools.a
