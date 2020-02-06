@@ -76,7 +76,6 @@ SUBDIRS = \
         qctools-cli \
         qctools-gui
 
-libqtmdk.subdir = libqtmdk
 qctools-lib.subdir = qctools-lib
 qctools-cli.subdir = qctools-cli
 qctools-gui.subdir = qctools-gui

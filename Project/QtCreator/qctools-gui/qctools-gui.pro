@@ -15,9 +15,9 @@ message("PWD = " $$PWD)
 include(../libqtmdk/libqtmdk.pri)
 
 # link against libqctools
-win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../qctools-lib/release/ -lqctools -L$$OUT_PWD/../libqtmdk/release/ -lqtmdk
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../qctools-lib/debug/ -lqctools -L$$OUT_PWD/../libqtmdk/debug/ -lqtmdk
-else:unix: LIBS += -L$$OUT_PWD/../qctools-lib/ -lqctools -L$$OUT_PWD/../libqtmdk/ -lqtmdk
+win32:CONFIG(release, debug|release): LIBS += -L$$OUT_PWD/../qctools-lib/release/ -lqctools
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$OUT_PWD/../qctools-lib/debug/ -lqctools
+else:unix: LIBS += -L$$OUT_PWD/../qctools-lib/ -lqctools
 
 INCLUDEPATH += $$PWD/../qctools-lib $$PWD/../libqtmdk
 DEPENDPATH += $$PWD/../qctools-lib $$PWD/../libqtmdk
