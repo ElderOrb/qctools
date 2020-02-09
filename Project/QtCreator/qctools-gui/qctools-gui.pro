@@ -22,20 +22,6 @@ else:unix: LIBS += -L$$OUT_PWD/../qctools-lib/ -lqctools
 INCLUDEPATH += $$PWD/../qctools-lib $$PWD/../libqtmdk
 DEPENDPATH += $$PWD/../qctools-lib $$PWD/../libqtmdk
 
-defineReplace(platformTargetSuffix) {
-    ios:CONFIG(iphonesimulator, iphonesimulator|iphoneos): \
-        suffix = _iphonesimulator
-    else: \
-        suffix =
-
-    CONFIG(debug, debug|release) {
-        !debug_and_release|build_pass {
-            mac: return($${suffix}_debug)
-            win32: return($${suffix}d)
-        }
-    }
-    return($$suffix)
-}
 
 win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../qctools-lib/release/libqctools.a
 else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../qctools-lib/debug/libqctools.a
@@ -107,17 +93,8 @@ SOURCES += \
     $$SOURCES_PATH/GUI/filters.cpp \
     $$SOURCES_PATH/GUI/filterselector.cpp
 
-win32 {
-    greaterThan(QT_MAJOR_VERSION, 4): {
-        greaterThan(QT_MINOR_VERSION, 8): {
-            ZLIB_INCLUDE_PATH = $$absolute_path($$[QT_INSTALL_PREFIX]/../src/qtbase/src/3rdparty/zlib/src)
-        } else {
-            ZLIB_INCLUDE_PATH = $$absolute_path($$[QT_INSTALL_PREFIX]/../src/qtbase/src/3rdparty/zlib)
-        }
-    }
-    message("qctools: ZLIB_INCLUDE_PATH = " $$ZLIB_INCLUDE_PATH)
-    INCLUDEPATH += $$ZLIB_INCLUDE_PATH
-}
+
+include(../zlib.pri)
 
 FORMS += \
     $$SOURCES_PATH/GUI/mainwindow.ui \
@@ -217,20 +194,20 @@ macx:contains(DEFINES, USE_BREW) {
     !win32 {
         include( $${QWT_ROOT}/qwtbuild.pri )
     }
-
-    message("using $${QWT_ROOT}/qwtfunctions.pri")
     include( $${QWT_ROOT}/qwtfunctions.pri )
 
-    !win32 {
-            LIBS      += -L$${QWT_ROOT}/lib -lqwt
+    macx {
+        macx:LIBS       += -F$${QWT_ROOT}/lib -framework qwt
     }
 
-    win32 {
-        CONFIG(debug, debug|release) {
-            LIBS += -L$${QWT_ROOT}/lib -lqwtd
-        } else:CONFIG(release, debug|release) {
-            LIBS += -L$${QWT_ROOT}/lib -lqwt
-        }
+    win32-msvc* {
+        DEFINES += QWT_DLL
+    }
+
+    !macx: {
+        win32:CONFIG(release, debug|release): LIBS += -L$${QWT_ROOT}/lib -lqwt
+        else:win32:CONFIG(debug, debug|release): LIBS += -L$${QWT_ROOT}/lib -lqwtd
+        else: LIBS += -L$${QWT_ROOT}/lib -lqwt
     }
 
     INCLUDEPATH += $$QWT_ROOT/src
@@ -240,8 +217,8 @@ INCLUDEPATH += $$SOURCES_PATH
 INCLUDEPATH += $$SOURCES_PATH/ThirdParty/cqmarkdown
 include(../ffmpeg.pri)
 
-!win32 {
-    LIBS += -lz
+win32-g++* {
+    LIBS += -lbcrypt -lwsock32 -lws2_32
 }
 
 !win32 {
@@ -255,7 +232,7 @@ unix {
 
 macx:ICON = $$SOURCES_PATH/Resource/Logo.icns
 macx:LIBS += -liconv \
-	     -framework CoreFoundation \
+             -framework CoreFoundation \
              -framework Foundation \
              -framework AppKit \
              -framework AudioToolBox \

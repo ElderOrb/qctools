@@ -21,6 +21,8 @@ INCLUDEPATH += $$SOURCES_PATH/ThirdParty/tinyxml2
 
 QMAKE_CXXFLAGS += -DWITH_SYSTEM_FFMPEG=1
 
+include(../zlib.pri)
+
 HEADERS = \
     $$SOURCES_PATH/ThirdParty/tinyxml2/tinyxml2.h \
     $$SOURCES_PATH/Core/AudioCore.h \
@@ -63,17 +65,5 @@ SOURCES = \
     $$SOURCES_PATH/Core/SignalServer.cpp \
     $$SOURCES_PATH/Core/Preferences.cpp \
     $$SOURCES_PATH/Core/FFmpegVideoEncoder.cpp
-
-win32 {
-    greaterThan(QT_MAJOR_VERSION, 4): {
-        greaterThan(QT_MINOR_VERSION, 8): {
-            ZLIB_INCLUDE_PATH = $$absolute_path($$[QT_INSTALL_PREFIX]/../src/qtbase/src/3rdparty/zlib/src)
-        } else {
-            ZLIB_INCLUDE_PATH = $$absolute_path($$[QT_INSTALL_PREFIX]/../src/qtbase/src/3rdparty/zlib)
-        }
-    }
-    message("qctools-lib: ZLIB_INCLUDE_PATH = " $$ZLIB_INCLUDE_PATH)
-    INCLUDEPATH += $$ZLIB_INCLUDE_PATH
-}
 
 include($$SOURCES_PATH/ThirdParty/qblowfish/qblowfish.pri)
