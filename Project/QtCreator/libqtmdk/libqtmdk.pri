@@ -6,10 +6,17 @@ static|contains(CONFIG, staticlib) {
 } else {
   DEFINES += Q_MDK_API=Q_DECL_EXPORT
 }
+
 macx {
   QMAKE_CXXFLAGS += -F$$PWD/../mdk-sdk/lib
-  LIBS += -F/usr/local/lib -framework mdk
-} else {
+  LIBS += -F$$PWD/../mdk-sdk/lib -framework mdk
+}
+
+linux {
+  LIBS += -L$$PWD/../mdk-sdk/lib -lmdk
+}
+
+win32 {
   LIBS += -L$$PWD/../mdk-sdk/lib/x64 -lmdk
 }
 
