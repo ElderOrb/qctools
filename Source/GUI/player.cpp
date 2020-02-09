@@ -36,6 +36,7 @@ Player::Player(QWidget *parent) :
 
     m_renderer = new QMDKWidgetRenderer(ui->scrollArea);
     m_player = new QMDKPlayer(m_renderer);
+    m_player->setProperty("continue_at_end", "1");
     m_renderer->setSource(m_player);
 
     // m_vo = new QtAV::VideoOutput(ui->scrollArea);
