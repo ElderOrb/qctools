@@ -6,6 +6,7 @@
 #define QMDKPlayer_H
 
 #include <QObject>
+#include <QTimer>
 #include <memory>
 
 namespace mdk {
@@ -50,9 +51,12 @@ public:
 
 Q_SIGNALS:
     void stateChanged(QMDKPlayer::State state);
+    void positionChanged(qint64 ms);
 
 private:
     std::unique_ptr<mdk::Player> player_;
+    QTimer m_positionTracker;
+    qint64 m_position;
 };
 
 #endif // QMDKPlayer_H

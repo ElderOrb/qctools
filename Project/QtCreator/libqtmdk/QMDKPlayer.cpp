@@ -11,6 +11,8 @@
 #include <QTimer>
 #include "mdk/Player.h"
 
+Q_DECLARE_METATYPE(QMDKPlayer::State);
+
 using namespace MDK_NS;
 QMDKPlayer::QMDKPlayer(QObject *parent)
     : QObject(parent)
@@ -43,12 +45,39 @@ QMDKPlayer::QMDKPlayer(QObject *parent)
         QCoreApplication::instance()->postEvent(vo, new QUpdateLaterEvent(QRegion(0, 0, vo->property("width").toInt(), vo->property("height").toInt())));
     });
 
+    m_positionTracker.setInterval(20);
+
     player_->onStateChanged([this](::State s){
         Q_EMIT stateChanged((State) s);
     });
+
+    qDebug() << "subscribing for state changed...";
+    connect(this, &QMDKPlayer::stateChanged, this, [&](State state) {
+        qDebug() << "state changed: " << state;
+
+        if(state == State::Playing) {
+            m_position = position();
+
+            qDebug() << "starting position tracker...";
+            m_positionTracker.start();
+        } else {
+
+            qDebug() << "stopping position tracker...";
+            m_positionTracker.stop();
+        }
+    }, Qt::QueuedConnection);
+
+    connect(&m_positionTracker, &QTimer::timeout, [&]() {
+        if(m_position != position()) {
+            Q_EMIT positionChanged(position());
+            m_position = position();
+        }
+    });
 }
 
-QMDKPlayer::~QMDKPlayer() = default;
+QMDKPlayer::~QMDKPlayer() {
+    setLogHandler({});
+};
 
 void QMDKPlayer::setDecoders(const QStringList &dec)
 {

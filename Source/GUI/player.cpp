@@ -27,7 +27,7 @@ const int DefaultForthFilterIndex = 0;
 Player::Player(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::Player),
-    m_fileInformation(nullptr), m_commentsPlot(nullptr), m_seekOnFileInformationPositionChange(true)
+    m_fileInformation(nullptr), m_commentsPlot(nullptr), m_seekOnFileInformationPositionChange(true), m_handlePlayPauseClick(true)
 {
     ui->setupUi(this);
 
@@ -156,6 +156,11 @@ FileInformation *Player::file() const
     return m_fileInformation;
 }
 
+QPushButton *Player::playPauseButton() const
+{
+    return ui->playPause_pushButton;
+}
+
 template <typename T>
 class PropertyWaiter {
 public:
@@ -277,6 +282,12 @@ void Player::playPaused(qint64 ms)
 
 void Player::setFile(FileInformation *fileInfo)
 {
+    if(fileInfo == nullptr) {
+        m_player->stop();
+        m_fileInformation = nullptr;
+        return;
+    }
+
     if(m_player->media() != fileInfo->fileName()) {
 
         if(m_fileInformation != nullptr)
@@ -378,6 +389,11 @@ void Player::seekBySlider()
     seekBySlider(ui->playerSlider->value());
 }
 
+void Player::showEvent(QShowEvent *event)
+{
+    updateVideoOutputSize();
+}
+
 void Player::resizeEvent(QResizeEvent *event)
 {
     updateVideoOutputSize();
@@ -466,6 +482,19 @@ void Player::updateSlider(qint64 value)
     m_seekOnFileInformationPositionChange = false;
     m_fileInformation->Frames_Pos_Set(framePos);
     m_seekOnFileInformationPositionChange = true;
+
+    auto framesCount = m_fileInformation->Frames_Count_Get();
+    qDebug() << "framesCount: " << framesCount << "framesPos: " << framePos;
+
+    if((framePos + 1) == framesCount) {
+        m_player->pause();
+        m_handlePlayPauseClick = false;
+        ui->playPause_pushButton->animateClick(0);
+        QTimer::singleShot(0, [&]() {
+            m_handlePlayPauseClick = true;
+            ui->playPause_pushButton->setIcon(QIcon(":/icon/play.png"));
+        });
+    }
 
     updateInfoLabels();
 }
@@ -620,7 +649,8 @@ void Player::onCursorMoved(int x)
 
 void Player::on_playPause_pushButton_clicked()
 {
-    playPause();
+    if(m_handlePlayPauseClick)
+        playPause();
 }
 
 void Player::on_fitToScreen_radioButton_toggled(bool value)
@@ -728,6 +758,63 @@ void Player::handleFilterChange(FilterSelector *filterSelector, int filterIndex)
 void Player::stopAndWait()
 {
     m_player->stop();
+}
+
+qint64 Player::timeStringToMs(const QString &timeValue)
+{
+    qint64 ms = 0;
+
+    if(!timeValue.contains(".") && !timeValue.contains(":")) {
+        ms = timeValue.toInt();
+    } else if (timeValue.contains(".") && !timeValue.contains(":")) {
+        auto secAndMs = timeValue.split(".");
+        if(secAndMs.count() == 2) {
+            auto sec = secAndMs[0].toInt();
+            auto msec = secAndMs[1].toInt();
+            ms = qint64(sec) * 1000 + msec;
+        }
+    } else if(!timeValue.contains(".") && timeValue.contains(":")) {
+        auto splitted = timeValue.split(":");
+        auto hh = 0;
+        auto mm = 0;
+        auto ss = 0;
+
+        if(splitted.count() == 2) {
+            mm = splitted[0].toInt();
+            ss = splitted[1].toInt();
+        } else if(splitted.count() == 3) {
+            hh = splitted[0].toInt();
+            mm = splitted[1].toInt();
+            ss = splitted[2].toInt();
+        }
+
+        ms = qint64(hh) * 60 * 60 * 1000 + qint64(mm) * 60 * 1000 + qint64(ss) * 1000;
+
+    } else if(timeValue.contains(".") && timeValue.contains(":")) {
+        auto timeAndMs = timeValue.split(".");
+        if(timeAndMs.count() == 2) {
+            auto timeValue = timeAndMs[0];
+            auto msec = timeAndMs[1].toInt();
+
+            auto splitted = timeValue.split(":");
+            auto hh = 0;
+            auto mm = 0;
+            auto ss = 0;
+
+            if(splitted.count() == 2) {
+                mm = splitted[0].toInt();
+                ss = splitted[1].toInt();
+            } else if(splitted.count() == 3) {
+                hh = splitted[0].toInt();
+                mm = splitted[1].toInt();
+                ss = splitted[2].toInt();
+            }
+
+            ms = qint64(hh) * 60 * 60 * 1000 + qint64(mm) * 60 * 1000 + qint64(ss) * 1000 + msec;
+        }
+    }
+
+    return ms;
 }
 
 void Player::setFilter(const QString &filter)
@@ -879,58 +966,8 @@ void Player::on_speedp_horizontalSlider_valueChanged(int value)
 
 void Player::on_goToTime_lineEdit_returnPressed()
 {
-    qint64 ms = 0;
-
     auto timeValue = ui->goToTime_lineEdit->text();
-    if(!timeValue.contains(".") && !timeValue.contains(":")) {
-        ms = timeValue.toInt();
-    } else if (timeValue.contains(".") && !timeValue.contains(":")) {
-        auto secAndMs = timeValue.split(".");
-        if(secAndMs.count() == 2) {
-            auto sec = secAndMs[0].toInt();
-            auto msec = secAndMs[1].toInt();
-            ms = qint64(sec) * 1000 + msec;
-        }
-    } else if(!timeValue.contains(".") && timeValue.contains(":")) {
-        auto splitted = timeValue.split(":");
-        auto hh = 0;
-        auto mm = 0;
-        auto ss = 0;
-
-        if(splitted.count() == 2) {
-            mm = splitted[0].toInt();
-            ss = splitted[1].toInt();
-        } else if(splitted.count() == 3) {
-            hh = splitted[0].toInt();
-            mm = splitted[1].toInt();
-            ss = splitted[2].toInt();
-        }
-
-        ms = qint64(hh) * 60 * 60 * 1000 + qint64(mm) * 60 * 1000 + qint64(ss) * 1000;
-
-    } else if(timeValue.contains(".") && timeValue.contains(":")) {
-        auto timeAndMs = timeValue.split(".");
-        if(timeAndMs.count() == 2) {
-            auto timeValue = timeAndMs[0];
-            auto msec = timeAndMs[1].toInt();
-
-            auto splitted = timeValue.split(":");
-            auto hh = 0;
-            auto mm = 0;
-            auto ss = 0;
-
-            if(splitted.count() == 2) {
-                mm = splitted[0].toInt();
-                ss = splitted[1].toInt();
-            } else if(splitted.count() == 3) {
-                hh = splitted[0].toInt();
-                mm = splitted[1].toInt();
-                ss = splitted[2].toInt();
-            }
-
-            ms = qint64(hh) * 60 * 60 * 1000 + qint64(mm) * 60 * 1000 + qint64(ss) * 1000 + msec;
-        }
-    }
+    qint64 ms = timeStringToMs(timeValue);
 
     qDebug() << "go to " << ms;
     ui->goToTime_lineEdit->clearFocus();
