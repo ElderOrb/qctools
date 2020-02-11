@@ -35,6 +35,14 @@ jobs:
     - name: Install dependencies
       run: |
         brew install ${{ matrix.packages }} pkg-config ffmpeg qwt
+        
+    - name: Download mdk
+      run: |
+        ls .
+        wget https://downloads.sourceforge.net/project/mdk-sdk/nightly/mdk-sdk-macOS.tar.xz -O mdk-sdk-macOS.tar.xz
+        ls .
+        tar -xf ./mdk-sdk-macOS.tar.xz -C ./Project/QtCreator
+        ls ./Project/QtCreator
 
     - name: Build QCTools
       env:
@@ -82,6 +90,14 @@ jobs:
     - name: Set Qt5 environment path
       run: |
         echo "::add-path::/usr/local/opt/qt5/bin"
+
+    - name: Download mdk
+      run: |
+        ls .
+        wget https://downloads.sourceforge.net/project/mdk-sdk/nightly/mdk-sdk-macOS.tar.xz -O mdk-sdk-macOS.tar.xz
+        ls .
+        tar -xf ./mdk-sdk-macOS.tar.xz -C ./Project/QtCreator
+        ls ./Project/QtCreator
 
     - name: Build qwt
       run: |
@@ -165,11 +181,19 @@ jobs:
         curl -L https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
         sudo apt-get update
 
+    - name: Download mdk
+      run: |
+        wget https://downloads.sourceforge.net/project/mdk-sdk/nightly/mdk-sdk-linux.tar.xz -O mdk-sdk-linux.tar.xz
+        tar -xf ./mdk-sdk-linux.tar.xz -C ./Project/QtCreator
+        ls ./Project/QtCreator
+
     - name: Install compiler and FFmpeg dependencies
       run: |
         sudo add-apt-repository ppa:jonathonf/ffmpeg-4
         sudo apt-get update &&
         sudo apt-get install -y ${{ matrix.packages }} \
+                                libc++1 \
+                                libc++abi1 \
                                 libavcodec-dev \
                                 libavformat-dev \
                                 libavdevice-dev \
@@ -228,6 +252,15 @@ jobs:
       uses: ouuan/install-qt-action@v2.3.1
       with:
           arch: win64_mingw73
+
+    - name: Install wget & archiver
+      run: |
+        choco install wget archiver
+        
+    - name: Download mdk
+      run: |
+        wget https://downloads.sourceforge.net/project/mdk-sdk/nightly/mdk-sdk-windows-desktop.tar.xz -O mdk-sdk-windows-desktop.tar.xz
+        arc unarchive mdk-sdk-windows-desktop.tar.xz Project/QtCreator
 
     - name: Install msys2
       run: |
@@ -323,6 +356,15 @@ jobs:
     - name: Install jom
       run: |
         choco install jom
+
+    - name: Install wget & archiver
+      run: |
+        choco install wget archiver
+        
+    - name: Download mdk
+      run: |
+        wget https://downloads.sourceforge.net/project/mdk-sdk/nightly/mdk-sdk-windows-desktop.tar.xz -O mdk-sdk-windows-desktop.tar.xz
+        arc unarchive mdk-sdk-windows-desktop.tar.xz Project/QtCreator
 
     - name: Build and install zlib
       shell: cmd
