@@ -216,6 +216,11 @@ INCLUDEPATH += $$SOURCES_PATH
 INCLUDEPATH += $$SOURCES_PATH/ThirdParty/cqmarkdown
 include(../ffmpeg.pri)
 
+# this is required for building against manually compiled ffmpeg
+!win32 {
+    LIBS += -lbz2
+}
+
 win32-g++* {
     LIBS += -lbcrypt -lwsock32 -lws2_32
 }
