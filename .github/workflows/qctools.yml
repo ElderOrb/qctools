@@ -54,6 +54,11 @@ jobs:
         cd build
         qmake ..
         make -j4
+        ls QCTools.app
+        cd QCTools.app
+        ls
+        cd Contents
+        ls
 
 
   build-macos-no-brew:
@@ -131,6 +136,11 @@ jobs:
         cd build
         qmake .. 
         make -j4
+        ls QCTools.app
+        cd QCTools.app
+        ls
+        cd Contents
+        ls
 
 
   build-linux:
@@ -221,6 +231,7 @@ jobs:
         cd Project/QtCreator
         qmake
         make -j4
+        ls
 
 
   build-windows-mingw:
@@ -318,7 +329,7 @@ jobs:
       run: |
         cd Project/QtCreator
         mingw32-make -j4
-
+        ls
 
   build-windows-vs:
 
@@ -425,3 +436,4 @@ jobs:
         call "%VS_PATH%\\Enterprise\\VC\\Auxiliary\\Build\\vcvarsall.bat" x64
         cd Project/QtCreator
         jom -j4
+        ls

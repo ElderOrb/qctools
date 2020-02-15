@@ -19,6 +19,72 @@ else:unix: LIBS += -L$$OUT_PWD/../qctools-lib/ -lqctools
 INCLUDEPATH += $$PWD/../qctools-lib $$PWD/../libqtmdk
 DEPENDPATH += $$PWD/../qctools-lib $$PWD/../libqtmdk
 
+if(equals(MAKEFILE_GENERATOR, MSVC.NET)|equals(MAKEFILE_GENERATOR, MSBUILD)) {
+  TRY_COPY = $$QMAKE_COPY
+} else {
+  TRY_COPY = -$$QMAKE_COPY #makefile. or -\$\(COPY_FILE\)
+}
+
+message('TRY_COPY: ' $$TRY_COPY)
+
+mac: {
+    mdklibs.pattern = $$absolute_path($$PWD/../mdk-sdk/lib/*)
+    message('mdklibs.pattern: ' $$mdklibs.pattern)
+
+    mdklibs.files = $$files($$mdklibs.pattern)
+    message('mdklibs.files: ' $$mdklibs.files)
+
+    mdklibs.path = $$absolute_path($$OUT_PWD$${BUILD_DIR}/$${TARGET}.app/Contents/Frameworks)
+    message('mdklibs.path: ' $$mdklibs.path)
+
+    mdklibs.commands += $$escape_expand(\\n\\t)$$QMAKE_MKDIR_CMD $$shell_path($$mdklibs.path)
+
+    for(f, mdklibs.files) {
+      message('***: ' $$escape_expand(\\n\\t)$$QMAKE_COPY_DIR $$shell_path($$f) $$shell_path($$mdklibs.path))
+      mdklibs.commands += $$escape_expand(\\n\\t)$$QMAKE_COPY_DIR $$shell_path($$f) $$shell_path($$mdklibs.path)
+    }
+
+    isEmpty(QMAKE_POST_LINK): QMAKE_POST_LINK = $$mdklibs.commands
+    else: QMAKE_POST_LINK = $${QMAKE_POST_LINK}$$escape_expand(\\n\\t)$$mdklibs.commands
+
+    message('QMAKE_POST_LINK: ' $${QMAKE_POST_LINK})
+
+} else {
+
+    LIBRARY_SUBFOLDER=
+    win32: {
+        CONFIG(debug, debug|release) {
+            BUILD_SUFFIX=d
+            BUILD_DIR=/debug
+        } else:CONFIG(release, debug|release) {
+            BUILD_SUFFIX=
+            BUILD_DIR=/release
+        }
+        MDKLIBNAME = mdk
+	LIBRARY_SUBFOLDER = /x64
+    } else {
+        MDKLIBNAME = mdk
+    }
+    message('MDKLIBNAME: ' $${MDKLIBNAME})
+
+    MDKLIBS += -L$$absolute_path($$PWD/../mdk-sdk/bin$${LIBRARY_SUBFOLDER}) -l$${MDKLIBNAME}
+    mdklibs.pattern = $$absolute_path($$PWD/../mdk-sdk/bin$${LIBRARY_SUBFOLDER}/*.$$QMAKE_EXTENSION_SHLIB)
+    message('mdklibs.pattern: ' $$mdklibs.pattern)
+
+    mdklibs.files = $$files($$mdklibs.pattern)
+    message('mdklibs.files: ' $$mdklibs.files)
+
+    mdklibs.path = $$absolute_path($$OUT_PWD$${BUILD_DIR})
+    for(f, mdklibs.files) {
+      message('***: ' $$escape_expand(\\n\\t)$$TRY_COPY $$shell_path($$f) $$shell_path($$mdklibs.path))
+      mdklibs.commands += $$escape_expand(\\n\\t)$$TRY_COPY $$shell_path($$f) $$shell_path($$mdklibs.path)
+    }
+
+    isEmpty(QMAKE_POST_LINK): QMAKE_POST_LINK = $$mdklibs.commands
+    else: QMAKE_POST_LINK = $${QMAKE_POST_LINK}$$escape_expand(\\n\\t)$$mdklibs.commands
+
+    message('QMAKE_POST_LINK: ' $${QMAKE_POST_LINK})
+}
 
 win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../qctools-lib/release/libqctools.a
 else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$OUT_PWD/../qctools-lib/debug/libqctools.a
