@@ -28,7 +28,7 @@ if(equals(MAKEFILE_GENERATOR, MSVC.NET)|equals(MAKEFILE_GENERATOR, MSBUILD)) {
 message('TRY_COPY: ' $$TRY_COPY)
 
 mac: {
-    mdklibs.pattern = $$absolute_path($$PWD/../mdk-sdk/lib/*)
+    mdklibs.pattern = $$absolute_path($$PWD/../mdk-sdk/lib/*.framework)
     message('mdklibs.pattern: ' $$mdklibs.pattern)
 
     mdklibs.files = $$files($$mdklibs.pattern)
@@ -37,7 +37,7 @@ mac: {
     mdklibs.path = $$absolute_path($$OUT_PWD$${BUILD_DIR}/$${TARGET}.app/Contents/Frameworks)
     message('mdklibs.path: ' $$mdklibs.path)
 
-    mdklibs.commands += $$escape_expand(\\n\\t)$$QMAKE_MKDIR_CMD $$shell_path($$mdklibs.path)
+    mdklibs.commands += $$escape_expand(\\n\\t)$$sprintf($$QMAKE_MKDIR_CMD, $$shell_path($$mdklibs.path))
 
     for(f, mdklibs.files) {
       message('***: ' $$escape_expand(\\n\\t)$$QMAKE_COPY_DIR $$shell_path($$f) $$shell_path($$mdklibs.path))
