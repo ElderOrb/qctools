@@ -54,8 +54,9 @@ jobs:
         cd build
         qmake ..
         make -j4
-        ls QCTools.app
-        cd QCTools.app
+        ls
+        ls qctools-gui/QCTools.app
+        cd qctools-gui/QCTools.app
         ls
         cd Contents
         ls
@@ -136,12 +137,12 @@ jobs:
         cd build
         qmake .. 
         make -j4
-        ls QCTools.app
-        cd QCTools.app
+        ls
+        ls qctools-gui/QCTools.app
+        cd qctools-gui/QCTools.app
         ls
         cd Contents
         ls
-
 
   build-linux:
 
