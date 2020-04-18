@@ -5,7 +5,6 @@
 #include <QPushButton>
 #include <QTimer>
 #include <QWidget>
-#include <QtAV>
 
 class FileInformation;
 class FilterSelector;
@@ -16,6 +15,8 @@ namespace Ui {
 class Player;
 }
 
+class QMDKPlayer;
+class QMDKWidgetRenderer;
 class Player : public QMainWindow
 {
     Q_OBJECT
@@ -101,15 +102,11 @@ private:
 private:
     Ui::Player *ui;
 
-    QtAV::VideoOutput *m_vo;
-    QtAV::AVPlayer *m_player;
+    QMDKPlayer* m_player;
     bool m_handlePlayPauseClick;
-
+    QMDKWidgetRenderer* m_renderer;
     qreal m_unit;
     int m_framesCount;
-
-    QtAV::LibAVFilterVideo* m_videoFilter;
-    QtAV::LibAVFilterAudio* m_audioFilter;
 
     FileInformation* m_fileInformation;
     FilterSelector* m_filterSelectors[6];

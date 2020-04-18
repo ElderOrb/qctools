@@ -53,6 +53,11 @@ DEFINES += QT_DEPRECATED_WARNING
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 include(../zlib.pri)
+# this is required for building against manually compiled ffmpeg
+!win32 {
+    LIBS += -lbz2
+}
+
 win32 {
     LIBS += -lbcrypt -lwsock32 -lws2_32
 }

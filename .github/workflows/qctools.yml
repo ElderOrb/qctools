@@ -22,37 +22,44 @@ jobs:
     env: ${{ matrix.env }}
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v2.0.0
       with:
         fetch: 1
-
     - name: Checkout submodules
       shell: bash
       run: |
-        GIT_PATH=https://github.com/.extraheader
-        AUTH_HEADER="$(git config --local --get http.$GIT_PATH)"
+        auth_header="$(git config --local --get http.https://github.com/.extraheader)"
         git submodule sync --recursive
-        git -c "http.extraheader=$AUTH_HEADER" \
-            -c protocol.version=2 \
-            submodule update --init --force --recursive --depth=1
+        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
 
     - name: Install dependencies
       run: |
         brew install ${{ matrix.packages }} pkg-config ffmpeg qwt
-
-    - name: Set Qt5 environment path
+        
+    - name: Download mdk
       run: |
-        echo "::add-path::/usr/local/opt/qt5/bin"
+        ls .
+        wget https://downloads.sourceforge.net/project/mdk-sdk/nightly/mdk-sdk-macOS.tar.xz -O mdk-sdk-macOS.tar.xz
+        ls .
+        tar -xf ./mdk-sdk-macOS.tar.xz -C ./Project/QtCreator
+        ls ./Project/QtCreator
 
     - name: Build QCTools
       env:
         QCTOOLS_USE_BREW: true
       run: |
+        export PATH=/usr/local/opt/qt5/bin:$PATH
         cd Project/QtCreator
         mkdir build
         cd build
         qmake ..
-        make -j12
+        make -j4
+        ls
+        ls qctools-gui/QCTools.app
+        cd qctools-gui/QCTools.app
+        ls
+        cd Contents
+        ls
 
 
   build-macos-no-brew:
@@ -73,33 +80,37 @@ jobs:
     env: ${{ matrix.env }}
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v2.0.0
       with:
         fetch: 1
-
     - name: Checkout submodules
       shell: bash
       run: |
-        GIT_PATH=https://github.com/.extraheader
-        AUTH_HEADER="$(git config --local --get http.$GIT_PATH)"
+        auth_header="$(git config --local --get http.https://github.com/.extraheader)"
         git submodule sync --recursive
-        git -c "http.extraheader=$AUTH_HEADER" \
-            -c protocol.version=2 \
-            submodule update --init --force --recursive --depth=1
-
+        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
+        
     - name: Install dependencies
       run: |
-        brew install ${{ matrix.packages }} nasm
+        brew install ${{ matrix.packages }} qt5 nasm
+    - name: Set Qt5 environment path
+      run: |
+        echo "::add-path::/usr/local/opt/qt5/bin"
 
-    - name: Install Qt 5.12.6
-      uses: jurplel/install-qt-action@v2
+    - name: Download mdk
+      run: |
+        ls .
+        wget https://downloads.sourceforge.net/project/mdk-sdk/nightly/mdk-sdk-macOS.tar.xz -O mdk-sdk-macOS.tar.xz
+        ls .
+        tar -xf ./mdk-sdk-macOS.tar.xz -C ./Project/QtCreator
+        ls ./Project/QtCreator
 
     - name: Build qwt
       run: |
         git clone --depth 1 https://github.com/opencor/qwt ../qwt
         cd ../qwt
         qmake -r
-        make -j12
+        make -j4
 
     - name: Build FFmpeg
       run: |
@@ -115,7 +126,7 @@ jobs:
                     --disable-ffplay \
                     --disable-ffprobe \
                     --disable-debug
-        make -j12
+        make -j4
 
     - name: Build QCTools
       env:
@@ -124,9 +135,14 @@ jobs:
         cd Project/QtCreator
         mkdir build
         cd build
-        qmake ..
-        make -j12
-
+        qmake .. 
+        make -j4
+        ls
+        ls qctools-gui/QCTools.app
+        cd qctools-gui/QCTools.app
+        ls
+        cd Contents
+        ls
 
   build-linux:
 
@@ -152,19 +168,15 @@ jobs:
     env: ${{ matrix.env }}
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v2.0.0
       with:
         fetch: 1
-
     - name: Checkout submodules
       shell: bash
       run: |
-        GIT_PATH=https://github.com/.extraheader
-        AUTH_HEADER="$(git config --local --get http.$GIT_PATH)"
+        auth_header="$(git config --local --get http.https://github.com/.extraheader)"
         git submodule sync --recursive
-        git -c "http.extraheader=$AUTH_HEADER" \
-            -c protocol.version=2 \
-            submodule update --init --force --recursive --depth=1
+        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
 
     - name: Install Python 3.7 version
       uses: actions/setup-python@v1
@@ -180,11 +192,19 @@ jobs:
         curl -L https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
         sudo apt-get update
 
+    - name: Download mdk
+      run: |
+        wget https://downloads.sourceforge.net/project/mdk-sdk/nightly/mdk-sdk-linux.tar.xz -O mdk-sdk-linux.tar.xz
+        tar -xf ./mdk-sdk-linux.tar.xz -C ./Project/QtCreator
+        ls ./Project/QtCreator
+
     - name: Install compiler and FFmpeg dependencies
       run: |
         sudo add-apt-repository ppa:jonathonf/ffmpeg-4
         sudo apt-get update &&
         sudo apt-get install -y ${{ matrix.packages }} \
+                                libc++1 \
+                                libc++abi1 \
                                 libavcodec-dev \
                                 libavformat-dev \
                                 libavdevice-dev \
@@ -193,7 +213,7 @@ jobs:
                                 libxv-dev
 
     - name: Install Qt 5.12.6
-      uses: jurplel/install-qt-action@v2
+      uses: ouuan/install-qt-action@v2.3.1
 
     - name: Cleanup
       run: |
@@ -205,13 +225,14 @@ jobs:
         git clone --depth 1 https://github.com/opencor/qwt ../qwt
         cd ../qwt
         qmake -r
-        make -j12
+        make -j4
 
     - name: Build QCTools
       run: |
         cd Project/QtCreator
         qmake
-        make -j12
+        make -j4
+        ls
 
 
   build-windows-mingw:
@@ -223,19 +244,15 @@ jobs:
       MSYS2_PATH_TYPE: inherit
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v2.0.0
       with:
         fetch: 1
-
     - name: Checkout submodules
       shell: bash
       run: |
-        GIT_PATH=https://github.com/.extraheader
-        AUTH_HEADER="$(git config --local --get http.$GIT_PATH)"
+        auth_header="$(git config --local --get http.https://github.com/.extraheader)"
         git submodule sync --recursive
-        git -c "http.extraheader=$AUTH_HEADER" \
-            -c protocol.version=2 \
-            submodule update --init --force --recursive --depth=1
+        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
 
     - name: Install Python 3.7 version
       uses: actions/setup-python@v1
@@ -244,9 +261,18 @@ jobs:
         architecture: 'x64'
 
     - name: Install Qt 5.12.6
-      uses: jurplel/install-qt-action@v2
+      uses: ouuan/install-qt-action@v2.3.1
       with:
-        arch: win64_mingw73
+          arch: win64_mingw73
+
+    - name: Install wget & archiver
+      run: |
+        choco install wget archiver
+        
+    - name: Download mdk
+      run: |
+        wget https://downloads.sourceforge.net/project/mdk-sdk/nightly/mdk-sdk-windows-desktop.tar.xz -O mdk-sdk-windows-desktop.tar.xz
+        arc unarchive mdk-sdk-windows-desktop.tar.xz Project/QtCreator
 
     - name: Install msys2
       run: |
@@ -293,7 +319,7 @@ jobs:
     - name: Build qwt
       run: |
         cd ../qwt
-        mingw32-make -j12
+        mingw32-make -j4
 
     - name: Configure QCTools
       run: |
@@ -303,27 +329,23 @@ jobs:
     - name: Build QCTools
       run: |
         cd Project/QtCreator
-        mingw32-make -j12
-
+        mingw32-make -j4
+        ls
 
   build-windows-vs:
 
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v2.0.0
       with:
         fetch: 1
-
     - name: Checkout submodules
       shell: bash
       run: |
-        GIT_PATH=https://github.com/.extraheader
-        AUTH_HEADER="$(git config --local --get http.$GIT_PATH)"
+        auth_header="$(git config --local --get http.https://github.com/.extraheader)"
         git submodule sync --recursive
-        git -c "http.extraheader=$AUTH_HEADER" \
-            -c protocol.version=2 \
-            submodule update --init --force --recursive --depth=1
+        git -c "http.extraheader=$auth_header" -c protocol.version=2 submodule update --init --force --recursive --depth=1
 
     - name: Install Python 3.7 version
       uses: actions/setup-python@v1
@@ -347,6 +369,15 @@ jobs:
       run: |
         choco install jom
 
+    - name: Install wget & archiver
+      run: |
+        choco install wget archiver
+        
+    - name: Download mdk
+      run: |
+        wget https://downloads.sourceforge.net/project/mdk-sdk/nightly/mdk-sdk-windows-desktop.tar.xz -O mdk-sdk-windows-desktop.tar.xz
+        arc unarchive mdk-sdk-windows-desktop.tar.xz Project/QtCreator
+
     - name: Build and install zlib
       shell: cmd
       run: |
@@ -361,10 +392,10 @@ jobs:
               -DBUILD_SHARED_LIBS=0 ^
               -DCMAKE_BUILD_TYPE=Release ^
               ..
-        jom -j12 install
+        jom -j4 install
 
     - name: Install Qt 5.12.6
-      uses: jurplel/install-qt-action@v2
+      uses: ouuan/install-qt-action@v2.3.1
 
     - name: Install FFmpeg
       run: |
@@ -392,7 +423,7 @@ jobs:
         set "VS_PATH=C:\\Program Files (x86)\\Microsoft Visual Studio\\2019"
         call "%VS_PATH%\\Enterprise\\VC\\Auxiliary\\Build\\vcvarsall.bat" x64
         cd ../qwt
-        jom -j12
+        jom -j4
 
     - name: Configure QCTools
       run: |
@@ -405,4 +436,5 @@ jobs:
         set "VS_PATH=C:\\Program Files (x86)\\Microsoft Visual Studio\\2019"
         call "%VS_PATH%\\Enterprise\\VC\\Auxiliary\\Build\\vcvarsall.bat" x64
         cd Project/QtCreator
-        jom -j12
+        jom -j4
+        ls

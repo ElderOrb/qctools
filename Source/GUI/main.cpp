@@ -21,10 +21,13 @@ using namespace std;
 
 #include "mainwindow.h"
 #include "config.h"
+#include "Core/logging.h"
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
+
+    Logging logging;
     MainWindow w(NULL);
 
     QDesktopWidget desktop;

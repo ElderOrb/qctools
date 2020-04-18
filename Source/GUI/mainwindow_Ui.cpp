@@ -177,6 +177,14 @@ void MainWindow::Ui_Init()
         }
     });
 
+    connect(this, &MainWindow::filePositionChanged, [this](size_t filePosition) {
+        if (isFileSelected(filePosition)) {
+            this->setWindowTitle(QString("QCTools - %1").arg(Files[filePosition]->fileName()));
+        } else {
+            this->setWindowTitle(QString("QCTools"));
+        }
+    });
+
     auto profilesModel = new BarchartProfilesModel(m_profileSelectorCombobox, QCoreApplication::applicationDirPath());
 
     m_profileSelectorCombobox->setModel(profilesModel);
