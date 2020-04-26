@@ -42,7 +42,8 @@ HEADERS = \
     $$SOURCES_PATH/Core/SignalServerConnectionChecker.h \
     $$SOURCES_PATH/Core/SignalServer.h \
     $$SOURCES_PATH/Core/Preferences.h \
-    $$SOURCES_PATH/Core/FFmpegVideoEncoder.h
+    $$SOURCES_PATH/Core/FFmpegVideoEncoder.h \
+    $$SOURCES_PATH/Core/logging.h
 
 
 SOURCES = \
@@ -64,6 +65,8 @@ SOURCES = \
     $$SOURCES_PATH/Core/SignalServerConnectionChecker.cpp \
     $$SOURCES_PATH/Core/SignalServer.cpp \
     $$SOURCES_PATH/Core/Preferences.cpp \
-    $$SOURCES_PATH/Core/FFmpegVideoEncoder.cpp
+    $$SOURCES_PATH/Core/FFmpegVideoEncoder.cpp \
+    $$SOURCES_PATH/Core/logging.cpp
 
 include($$SOURCES_PATH/ThirdParty/qblowfish/qblowfish.pri)
+include(../spdlog.pri)

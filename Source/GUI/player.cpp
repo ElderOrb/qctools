@@ -975,6 +975,7 @@ qint64 Player::timeStringToMs(const QString &timeValue)
 
 void Player::setFilter(const QString &filter)
 {
+    qDebug() << "setting filter: " << filter;
     m_player->setProperty("video.avfilter", filter.toStdString());
 
     if(m_player->isPaused()) {
