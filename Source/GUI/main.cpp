@@ -27,6 +27,8 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
 
+    // use QT_LOGGING_RULES=*=false;mdk=true enable mdk-only logging
+
     Logging logging;
     MainWindow w(NULL);
 

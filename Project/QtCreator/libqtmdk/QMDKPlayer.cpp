@@ -9,9 +9,13 @@
 #include <QtDebug>
 #include <QRegion>
 #include <QTimer>
+#include <QLoggingCategory>
 #include "mdk/Player.h"
 
 Q_DECLARE_METATYPE(QMDKPlayer::State);
+
+Q_DECLARE_LOGGING_CATEGORY(libMdk)
+Q_LOGGING_CATEGORY(libMdk, "mdk")
 
 using namespace MDK_NS;
 QMDKPlayer::QMDKPlayer(QObject *parent)
@@ -20,9 +24,9 @@ QMDKPlayer::QMDKPlayer(QObject *parent)
 {
     setLogHandler([](LogLevel level, const char* msg){
         if (level >= std::underlying_type<LogLevel>::type(LogLevel::Info)) {
-            qDebug() << msg;
+            qCDebug(libMdk) << msg;
         } else if (level >= std::underlying_type<LogLevel>::type(LogLevel::Warning)) {
-            qWarning() << msg;
+            qCWarning(libMdk) << msg;
         }
     });
 
