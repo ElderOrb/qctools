@@ -18,6 +18,7 @@
 #include "draggablechildrenbehaviour.h"
 #include "QMDKPlayer.h"
 #include "QMDKRenderer.h"
+#include "mdk/Player.h"
 
 const int MaxFilters = 6;
 const int DefaultFirstFilterIndex = 0;
@@ -81,6 +82,8 @@ Player::Player(QWidget *parent) :
 
     ui->commentsPlaceHolderFrame->setLayout(new QHBoxLayout);
     ui->commentsPlaceHolderFrame->layout()->setMargin(0);
+
+    mdk::SetGlobalOption("MDK_KEY", "EA50230C27328547EF0B21D95C689C774407DB565765CD297F4378C1CFD0E55E026CE9F7860E7241C9B04763467E29527C43106A77FF1AF5299440B35F35920B15AFDCF3D8CD7AB810F4DE26A39763884507DC071431A2461330CF98CFD0DF3E026C94A5860E0C22C9B0C92E467EF2287C437B4277FF99A2299415E95F356DF4");
 
     m_renderer = new QMDKWidgetRenderer(ui->scrollArea);
     m_player = new QMDKPlayer(m_renderer);
