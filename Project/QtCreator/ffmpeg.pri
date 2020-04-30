@@ -1,6 +1,8 @@
 macx:contains(DEFINES, USE_BREW) {
     message("use ffmpeg from brew")
 
+    QT_CONFIG -= no-pkg-config
+
     PKGCONFIG += libavdevice libavcodec libavfilter libavformat libpostproc
     PKGCONFIG += libswresample libswscale libavcodec libavutil
 

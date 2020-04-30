@@ -26,7 +26,9 @@ QMDKPlayer::QMDKPlayer(QObject *parent)
         if (level >= std::underlying_type<LogLevel>::type(LogLevel::Info)) {
             qCDebug(libMdk) << msg;
         } else if (level >= std::underlying_type<LogLevel>::type(LogLevel::Warning)) {
-            qCWarning(libMdk) << msg;
+            qCWarning(libMdk) << msg;            
+        } else if (level >= std::underlying_type<LogLevel>::type(LogLevel::Off)) {
+            qCCritical(libMdk) << msg;
         }
     });
 

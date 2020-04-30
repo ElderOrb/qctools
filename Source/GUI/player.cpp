@@ -20,6 +20,10 @@
 #include "QMDKRenderer.h"
 #include "mdk/Player.h"
 
+#if defined(Q_OS_MACX)
+#include <dlfcn.h>
+#endif // Q_OS_MACX
+
 const int MaxFilters = 6;
 const int DefaultFirstFilterIndex = 0;
 const int DefaultSecondFilterIndex = 4;
@@ -84,6 +88,42 @@ Player::Player(QWidget *parent) :
     ui->commentsPlaceHolderFrame->layout()->setMargin(0);
 
     mdk::SetGlobalOption("MDK_KEY", "EA50230C27328547EF0B21D95C689C774407DB565765CD297F4378C1CFD0E55E026CE9F7860E7241C9B04763467E29527C43106A77FF1AF5299440B35F35920B15AFDCF3D8CD7AB810F4DE26A39763884507DC071431A2461330CF98CFD0DF3E026C94A5860E0C22C9B0C92E467EF2287C437B4277FF99A2299415E95F356DF4");
+
+#if defined(Q_OS_MACX)
+//    auto avutil = dlopen("/usr/local/opt/ffmpeg/lib/libavutil.56.dylib", /*RTLD_NOLOAD|*/RTLD_LOCAL|RTLD_NOW); // RTLD_NOLOAD: libavutil.56.dylib is already loaded by linker if your app links against ffmpeg libraries
+
+    auto avdevice = dlopen("libavdevice.58.dylib", /*RTLD_NOLOAD|*/RTLD_LOCAL|RTLD_NOW); // RTLD_NOLOAD: libavutil.56.dylib is already loaded by linker if your app links against ffmpeg libraries
+    qDebug() << "avdevice: " << avdevice;
+    mdk::SetGlobalOption("avutil", /*(int) (size_t)*/ (void*) avdevice);
+
+    auto avcodec = dlopen("libavcodec.58.dylib", /*RTLD_NOLOAD|*/RTLD_LOCAL|RTLD_NOW); // RTLD_NOLOAD: libavutil.56.dylib is already loaded by linker if your app links against ffmpeg libraries
+    qDebug() << "avcodec: " << avcodec;
+    mdk::SetGlobalOption("avcodec", /*(int) (size_t)*/ (void*) avcodec);
+
+    auto avfilter = dlopen("libavfilter.7.dylib", /*RTLD_NOLOAD|*/RTLD_LOCAL|RTLD_NOW); // RTLD_NOLOAD: libavutil.56.dylib is already loaded by linker if your app links against ffmpeg libraries
+    qDebug() << "avfilter: " << avfilter;
+    mdk::SetGlobalOption("avfilter", /*(int) (size_t)*/ (void*) avfilter);
+
+    auto avformat = dlopen("libavformat.58.dylib", /*RTLD_NOLOAD|*/RTLD_LOCAL|RTLD_NOW); // RTLD_NOLOAD: libavutil.56.dylib is already loaded by linker if your app links against ffmpeg libraries
+    qDebug() << "avformat: " << avformat;
+    mdk::SetGlobalOption("avformat", /*(int) (size_t)*/ (void*) avformat);
+
+    auto postproc = dlopen("libpostproc.55.dylib", /*RTLD_NOLOAD|*/RTLD_LOCAL|RTLD_NOW); // RTLD_NOLOAD: libavutil.56.dylib is already loaded by linker if your app links against ffmpeg libraries
+    qDebug() << "postproc: " << postproc;
+    mdk::SetGlobalOption("postproc", /*(int) (size_t)*/ (void*) postproc);
+
+    auto swresample = dlopen("libswresample.3.dylib", /*RTLD_NOLOAD|*/RTLD_LOCAL|RTLD_NOW); // RTLD_NOLOAD: libavutil.56.dylib is already loaded by linker if your app links against ffmpeg libraries
+    qDebug() << "swresample: " << swresample;
+    mdk::SetGlobalOption("swresample", /*(int) (size_t)*/ (void*) swresample);
+
+    auto swscale = dlopen("libswscale.5.dylib", /*RTLD_NOLOAD|*/RTLD_LOCAL|RTLD_NOW); // RTLD_NOLOAD: libavutil.56.dylib is already loaded by linker if your app links against ffmpeg libraries
+    qDebug() << "swscale: " << swscale;
+    mdk::SetGlobalOption("swscale", /*(int) (size_t)*/ (void*) swscale);
+
+    auto avutil = dlopen("libavutil.56.dylib", /*RTLD_NOLOAD|*/RTLD_LOCAL|RTLD_NOW); // RTLD_NOLOAD: libavutil.56.dylib is already loaded by linker if your app links against ffmpeg libraries
+    qDebug() << "avutil: " << avutil;
+    mdk::SetGlobalOption("avutil", /*(int) (size_t)*/ (void*) avutil);
+#endif // Q_OS_MACX
 
     m_renderer = new QMDKWidgetRenderer(ui->scrollArea);
     m_player = new QMDKPlayer(m_renderer);
