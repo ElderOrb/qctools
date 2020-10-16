@@ -250,7 +250,7 @@ jobs:
     - name: Install Qt 5.15
       uses: jurplel/install-qt-action@v2
       with:
-        arch: win64_mingw73
+        arch: win64_mingw81
         version: 5.15.1
 
     - name: Install msys2
