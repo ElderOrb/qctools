@@ -79,3 +79,12 @@ macx:LIBS += -liconv \
 
 HEADERS += \
     version.h
+
+message('qctools-lib: including ffmpeg')
+include(../ffmpeg.pri)
+
+QTAVPLAYER_SRC=$$absolute_path(../qctools-QtAVPlayer)
+QTAVPLAYER_LIB=$$absolute_path($$OUT_PWD/../qctools-QtAVPlayer)
+
+message('using UseQtAVPlayerLib')
+include(../qctools-QtAVPlayer/UseQtAVPlayerLib.pri)
